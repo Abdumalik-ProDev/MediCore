@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# caveman - compresses verbose text into terse, technical grunts
+# Usage: echo "long text here" | caveman
+#        caveman "some long sentence"
+#        cat file.txt | caveman
+
+set -euo pipefail
+
+if [ $# -ge 1 ]; then
+    input="$*"
+else
+    input=$(cat)
+fi
+
+word_count=$(echo "$input" | wc -w)
+
+if [ "$word_count" -le 5 ]; then
+    echo "$input"
+    exit 0
+fi
+
+# extract first 5 meaningful words
+echo "$input" | tr -s ' \t\n\r' ' ' | sed 's/^ *//;s/ *$//' | cut -d' ' -f1-5 | awk '{print $0 "."}'
