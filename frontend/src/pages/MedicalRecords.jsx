@@ -15,12 +15,11 @@ import { formatDate, fullName } from '../utils/formatters';
 import { SEVERITIES, STATUSES } from '../utils/constants';
 
 const defaultForm = {
-  patient_id: '', doctor_id: '', diagnosis_code: '',
-  diagnosis_name: '', description: '', severity: 'moderate',
-  status: 'active', diagnosed_date: '', notes: '',
+  patient_id: '', doctor_id: '', disease_id: '',
+  severity: 'moderate', status: 'active', diagnosed_date: '', notes: '',
 };
 
-export default function Diagnoses() {
+export default function MedicalRecords() {
   const { user } = useAuth();
   const canCreate = user?.role === 'admin' || user?.role === 'doctor';
   const toast = useToast();
@@ -31,9 +30,9 @@ export default function Diagnoses() {
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['diagnoses', page],
+    queryKey: ['medical-records', page],
     queryFn: async () => {
-      const { data } = await api.get('/diagnoses', { params: { page, limit: 10 } });
+      const { data } = await api.get('/medical-records', { params: { page, limit: 10 } });
       return data;
     },
   });
@@ -54,32 +53,46 @@ export default function Diagnoses() {
     },
   });
 
+  const { data: diseasesData } = useQuery({
+    queryKey: ['diseases-select'],
+    queryFn: async () => {
+      const { data } = await api.get('/diseases?limit=200');
+      return data.data;
+    },
+  });
+
   const createMutation = useMutation({
-    mutationFn: (body) => api.post('/diagnoses', body),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['diagnoses'] }); toast('Diagnosis created', 'success'); closeModal(); },
+    mutationFn: (body) => api.post('/medical-records', body),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['medical-records'] }); toast('Medical record created', 'success'); closeModal(); },
     onError: (err) => toast(err.response?.data?.error?.message || 'Error', 'error'),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, body }) => api.put(`/diagnoses/${id}`, body),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['diagnoses'] }); toast('Diagnosis updated', 'success'); closeModal(); },
+    mutationFn: ({ id, body }) => api.put(`/medical-records/${id}`, body),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['medical-records'] }); toast('Medical record updated', 'success'); closeModal(); },
     onError: (err) => toast(err.response?.data?.error?.message || 'Error', 'error'),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => api.delete(`/diagnoses/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['diagnoses'] }); toast('Diagnosis deleted', 'success'); setDeleteTarget(null); },
+    mutationFn: (id) => api.delete(`/medical-records/${id}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['medical-records'] }); toast('Medical record deleted', 'success'); setDeleteTarget(null); },
     onError: (err) => toast(err.response?.data?.error?.message || 'Error', 'error'),
   });
 
   const openCreate = () => { setEditing(null); setModalOpen(true); };
-  const openEdit = (d) => {
-    setEditing({ ...d, diagnosed_date: d.diagnosed_date?.split('T')[0] || '', patient_id: d.patient?.id || '', doctor_id: d.doctor?.id || '' });
+  const openEdit = (r) => {
+    setEditing({
+      ...r,
+      diagnosed_date: r.diagnosed_date?.split('T')[0] || '',
+      patient_id: r.patient?.id || '',
+      doctor_id: r.doctor?.id || '',
+      disease_id: r.disease?.id || '',
+    });
     setModalOpen(true);
   };
   const closeModal = () => { setModalOpen(false); setEditing(null); };
 
-  function DiagnosisForm() {
+  function RecordForm() {
     const { register, handleSubmit, formState: { errors } } = useForm({
       defaultValues: editing || defaultForm,
     });
@@ -100,7 +113,7 @@ export default function Diagnoses() {
             <select {...register('patient_id', { required: true })} className="input-field">
               <option value="">Select patient...</option>
               {patientsData?.map((p) => (
-                <option key={p.id} value={p.id}>{p.first_name} {p.last_name}</option>
+                <option key={p.id} value={p.id}>{fullName(p)}</option>
               ))}
             </select>
           </div>
@@ -109,24 +122,19 @@ export default function Diagnoses() {
             <select {...register('doctor_id')} className="input-field">
               <option value="">Select doctor...</option>
               {doctorsData?.map((d) => (
-                <option key={d.id} value={d.id}>Dr. {d.first_name} {d.last_name}</option>
+                <option key={d.id} value={d.id}>Dr. {fullName(d)}</option>
               ))}
             </select>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Diagnosis Name *</label>
-            <input {...register('diagnosis_name', { required: true })} className="input-field" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ICD-10 Code</label>
-            <input {...register('diagnosis_code')} className="input-field" placeholder="e.g. I10" />
-          </div>
-        </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-          <textarea {...register('description')} className="input-field" rows={2} />
+          <label className="block text-sm font-medium text-gray-700 mb-1">Disease *</label>
+          <select {...register('disease_id', { required: true })} className="input-field">
+            <option value="">Select disease...</option>
+            {diseasesData?.map((d) => (
+              <option key={d.id} value={d.id}>{d.name} ({d.icd_code})</option>
+            ))}
+          </select>
         </div>
         <div className="grid grid-cols-3 gap-4">
           <div>
@@ -153,7 +161,7 @@ export default function Diagnoses() {
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
           <Button type="submit" disabled={saving}>
-            {saving ? 'Saving...' : editing ? 'Update Diagnosis' : 'Add Diagnosis'}
+            {saving ? 'Saving...' : editing ? 'Update Record' : 'Add Record'}
           </Button>
         </div>
       </form>
@@ -161,12 +169,15 @@ export default function Diagnoses() {
   }
 
   const columns = [
-    { key: 'diagnosis_name', label: 'Diagnosis', render: (r) => (
-      <div><span className="font-medium">{r.diagnosis_name}</span>{r.diagnosis_code && <span className="text-xs text-gray-400 ml-2">({r.diagnosis_code})</span>}</div>
-    )},
+    {
+      key: 'disease', label: 'Disease', render: (r) => r.disease ? (
+        <div><span className="font-medium">{r.disease.name}</span><span className="text-xs text-gray-400 ml-2">({r.disease.icd_code})</span></div>
+      ) : '—',
+    },
     { key: 'patient', label: 'Patient', render: (r) => r.patient ? (
       <Link to={`/patients/${r.patient.id}`} className="text-primary-600 hover:text-primary-700">{fullName(r.patient)}</Link>
     ) : '—' },
+    { key: 'doctor', label: 'Doctor', render: (r) => r.doctor ? `Dr. ${fullName(r.doctor)}` : '—' },
     { key: 'severity', label: 'Severity', render: (r) => <Badge variant={r.severity}>{r.severity}</Badge> },
     { key: 'status', label: 'Status', render: (r) => <Badge variant={r.status}>{r.status}</Badge> },
     { key: 'diagnosed_date', label: 'Date', render: (r) => formatDate(r.diagnosed_date) },
@@ -194,22 +205,22 @@ export default function Diagnoses() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Diagnoses</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Medical Records</h1>
         {canCreate && (
-          <Button onClick={openCreate}><Plus size={18} />Add Diagnosis</Button>
+          <Button onClick={openCreate}><Plus size={18} />Add Record</Button>
         )}
       </div>
       <div className="card overflow-hidden">
         <DataTable columns={columns} data={data?.data} loading={isLoading} pagination={data?.pagination} onPageChange={setPage} />
       </div>
-      <Modal open={modalOpen} onClose={closeModal} title={editing ? 'Edit Diagnosis' : 'Add Diagnosis'} size="lg">
-        <DiagnosisForm />
+      <Modal open={modalOpen} onClose={closeModal} title={editing ? 'Edit Medical Record' : 'Add Medical Record'} size="lg">
+        <RecordForm />
       </Modal>
       <ConfirmDialog
         open={!!deleteTarget} onClose={() => setDeleteTarget(null)}
         onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
-        title="Delete Diagnosis"
-        message={`Delete ${deleteTarget?.diagnosis_name}?`}
+        title="Delete Medical Record"
+        message={`Delete medical record for ${deleteTarget?.patient ? fullName(deleteTarget.patient) : 'this patient'}?`}
         loading={deleteMutation.isPending}
       />
     </div>

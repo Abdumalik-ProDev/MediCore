@@ -14,19 +14,19 @@ import SearchInput from '../components/SearchInput';
 import { Plus, Pencil, Trash2, Eye, UserRound } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { formatDate, fullName } from '../utils/formatters';
-import { BLOOD_GROUPS } from '../utils/constants';
+import { BLOOD_GROUPS, SEVERITIES } from '../utils/constants';
 
 const defaultForm = {
   first_name: '', last_name: '', date_of_birth: '',
   gender: '', phone: '', email: '', address: '',
   blood_group: '', allergies: '', emergency_contact: '', emergency_phone: '',
-  doctor_id: '',
+  doctor_id: '', disease_id: '', severity: 'moderate', notes: '',
 };
 
 export default function Patients() {
   const { user } = useAuth();
-  const canCreate = user?.role === 'admin' || user?.role === 'receptionist';
-  const canEdit = user?.role === 'admin' || user?.role === 'clinician';
+  const canCreate = user?.role === 'admin' || user?.role === 'doctor' || user?.role === 'receptionist';
+  const canEdit = user?.role === 'admin' || user?.role === 'doctor';
   const toast = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -49,6 +49,14 @@ export default function Patients() {
     queryKey: ['doctors-select'],
     queryFn: async () => {
       const { data } = await api.get('/doctors?limit=100');
+      return data.data;
+    },
+  });
+
+  const { data: diseasesData } = useQuery({
+    queryKey: ['diseases-select'],
+    queryFn: async () => {
+      const { data } = await api.get('/diseases?limit=200');
       return data.data;
     },
   });
@@ -154,6 +162,36 @@ export default function Patients() {
             ))}
           </select>
         </div>
+        {!editing && (
+          <>
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Initial Diagnosis</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Disease</label>
+                <select {...register('disease_id')} className="input-field">
+                  <option value="">No disease</option>
+                  {diseasesData?.map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}{d.icd_code ? ` (${d.icd_code})` : ''}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Severity</label>
+                <select {...register('severity')} className="input-field">
+                  {SEVERITIES.map((s) => (
+                    <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+              <textarea {...register('notes')} className="input-field" rows={2} placeholder="Optional diagnosis notes..." />
+            </div>
+          </>
+        )}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>

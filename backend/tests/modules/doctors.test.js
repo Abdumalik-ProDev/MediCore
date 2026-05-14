@@ -10,7 +10,7 @@ const jwt = require('jsonwebtoken');
 const app = require('../../src/app');
 
 const adminToken = jwt.sign({ id: 'u1', email: 'admin@test.com', role: 'admin' }, 'test-secret');
-const clinicianToken = jwt.sign({ id: 'u2', email: 'clin@test.com', role: 'clinician' }, 'test-secret');
+const doctorToken = jwt.sign({ id: 'u2', email: 'doc@test.com', role: 'doctor' }, 'test-secret');
 
 describe('Doctors Module', () => {
   beforeEach(() => { process.env.JWT_SECRET = 'test-secret'; });
@@ -40,7 +40,7 @@ describe('Doctors Module', () => {
   describe('POST /api/v1/doctors', () => {
     it('should reject non-admin', async () => {
       await request(app)
-        .post('/api/v1/doctors').set('Authorization', `Bearer ${clinicianToken}`)
+        .post('/api/v1/doctors').set('Authorization', `Bearer ${doctorToken}`)
         .send({ first_name: 'X', last_name: 'Y', license_number: 'L3' }).expect(403);
     });
 

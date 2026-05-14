@@ -1,5 +1,7 @@
 const { z } = require('zod');
 
+const SEVERITIES = ['mild', 'moderate', 'severe', 'critical'];
+
 const createPatientSchema = z.object({
   doctor_id: z.string().uuid().optional().nullable(),
   first_name: z.string().min(1, 'First name is required').max(100),
@@ -13,6 +15,9 @@ const createPatientSchema = z.object({
   allergies: z.string().optional(),
   emergency_contact: z.string().max(100).optional(),
   emergency_phone: z.string().max(20).optional(),
+  disease_id: z.string().uuid('Invalid disease ID').optional(),
+  severity: z.enum(SEVERITIES).optional(),
+  notes: z.string().optional(),
 });
 
 const updatePatientSchema = createPatientSchema.partial();

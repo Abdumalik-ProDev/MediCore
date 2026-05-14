@@ -48,9 +48,14 @@ src/
 | Login | `/login` | Public | Email/password authentication |
 | Dashboard | `/` | All roles | Statistics cards, recent patients |
 | Doctors | `/doctors` | Admin, Receptionist | Data table with CRUD modals |
-| Patients | `/patients` | All roles | Data table with search, filter, CRUD |
-| Patient Profile | `/patients/:id` | All roles | Full profile with diagnoses history |
-| Diagnoses | `/diagnoses` | All roles | Data table with CRUD modals |
+| Patients | `/patients` | All roles | Data table with search, filter, CRUD; includes initial diagnosis on creation |
+| Patient Profile | `/patients/:id` | All roles | Full profile with medical records history |
+| Medical Records | `/medical-records` | Admin, Doctor | Data table with CRUD modals, filterable by patient/doctor/disease |
+| Disease Registry | `/diseases` | Admin, Doctor | Centralized disease catalog with search; admin can create/edit/delete |
+| Disease Suggestions | `/disease-suggestions` | Admin, Doctor | Doctors suggest new diseases; admin reviews and approves/rejects |
+| Appointments | `/appointments` | Admin, Doctor, Receptionist | Appointment scheduling with status tracking |
+| Receptionists | `/receptionists` | Admin | Receptionist profile management |
+| Audit Logs | `/audit-logs` | Admin | System audit trail |
 | 404 | `*` | All | Not found page |
 
 ## Components

@@ -54,31 +54,62 @@ async function getById(id) {
 
 async function getProfile(id) {
   const patient = await getById(id);
-  const { rows: diagnoses } = await pool.query(
-    `SELECT d.*,
-            jsonb_build_object('id', dr.id, 'first_name', dr.first_name, 'last_name', dr.last_name) AS doctor
-     FROM diagnoses d
-     LEFT JOIN doctors dr ON dr.id = d.doctor_id AND dr.deleted_at IS NULL
-     WHERE d.patient_id = $1 AND d.deleted_at IS NULL
-     ORDER BY d.diagnosed_date DESC`,
+  const { rows: records } = await pool.query(
+    `SELECT mr.*,
+            jsonb_build_object('id', dr.id, 'first_name', dr.first_name, 'last_name', dr.last_name) AS doctor,
+            jsonb_build_object('id', d.id, 'name', d.name, 'icd_code', d.icd_code) AS disease
+     FROM medical_records mr
+     LEFT JOIN doctors dr ON dr.id = mr.doctor_id AND dr.deleted_at IS NULL
+     LEFT JOIN diseases d ON d.id = mr.disease_id
+     WHERE mr.patient_id = $1 AND mr.deleted_at IS NULL
+     ORDER BY mr.diagnosed_date DESC`,
     [id],
   );
-  return { ...patient, diagnoses };
+  return { ...patient, diagnoses: records };
 }
 
 async function create(data) {
-  const { rows } = await pool.query(
-    `INSERT INTO patients (doctor_id, first_name, last_name, date_of_birth, gender, phone, email,
-      address, blood_group, allergies, emergency_contact, emergency_phone)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
-    [
-      data.doctor_id || null, data.first_name, data.last_name, data.date_of_birth,
-      data.gender || null, data.phone || null, data.email || null,
-      data.address || null, data.blood_group || null, data.allergies || null,
-      data.emergency_contact || null, data.emergency_phone || null,
-    ],
-  );
-  return rows[0];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const { rows } = await client.query(
+      `INSERT INTO patients (doctor_id, first_name, last_name, date_of_birth, gender, phone, email,
+        address, blood_group, allergies, emergency_contact, emergency_phone)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+      [
+        data.doctor_id || null, data.first_name, data.last_name, data.date_of_birth,
+        data.gender || null, data.phone || null, data.email || null,
+        data.address || null, data.blood_group || null, data.allergies || null,
+        data.emergency_contact || null, data.emergency_phone || null,
+      ],
+    );
+    const patient = rows[0];
+
+    if (data.disease_id) {
+      const diseaseCheck = await client.query(
+        'SELECT id FROM diseases WHERE id = $1 AND is_active = true',
+        [data.disease_id],
+      );
+      if (diseaseCheck.rows.length === 0) {
+        throw new AppError('Disease not found or inactive', 400, 'INVALID_DISEASE');
+      }
+
+      await client.query(
+        `INSERT INTO medical_records (patient_id, doctor_id, disease_id, severity, status, diagnosed_date, notes)
+         VALUES ($1, $2, $3, $4, 'active', CURRENT_DATE, $5)`,
+        [patient.id, data.doctor_id || null, data.disease_id, data.severity || 'moderate', data.notes || null],
+      );
+    }
+
+    await client.query('COMMIT');
+    return patient;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 async function update(id, data) {

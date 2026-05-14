@@ -12,8 +12,8 @@ router.use(authenticate);
 router.get('/', controller.list);
 router.get('/:id', controller.getById);
 router.get('/:id/profile', controller.getProfile);
-router.post('/', authorize('admin', 'receptionist'), validate(createPatientSchema), controller.create);
-router.put('/:id', authorize('admin', 'clinician'), validate(updatePatientSchema), controller.update);
+router.post('/', authorize('admin', 'doctor', 'receptionist'), validate(createPatientSchema), controller.create);
+router.put('/:id', authorize('admin', 'doctor'), validate(updatePatientSchema), controller.update);
 router.delete('/:id', authorize('admin'), controller.remove);
 
 module.exports = router;

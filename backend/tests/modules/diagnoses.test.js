@@ -10,7 +10,7 @@ const jwt = require('jsonwebtoken');
 const app = require('../../src/app');
 
 const adminToken = jwt.sign({ id: 'u1', role: 'admin' }, 'test-secret');
-const clinicianToken = jwt.sign({ id: 'u2', role: 'clinician' }, 'test-secret');
+const doctorToken = jwt.sign({ id: 'u2', role: 'doctor' }, 'test-secret');
 
 describe('Diagnoses Module', () => {
   beforeEach(() => { process.env.JWT_SECRET = 'test-secret'; });
@@ -27,15 +27,15 @@ describe('Diagnoses Module', () => {
   });
 
   describe('POST /api/v1/diagnoses', () => {
-    it('should create for clinician', async () => {
+    it('should create for doctor', async () => {
       mockQuery.mockResolvedValueOnce({ rows: [{ id: 'dx2', diagnosis_name: 'Asthma', diagnosis_code: 'J45.9', severity: 'mild', status: 'active', patient_id: 'p1' }] });
-      const res = await request(app).post('/api/v1/diagnoses').set('Authorization', `Bearer ${clinicianToken}`)
+      const res = await request(app).post('/api/v1/diagnoses').set('Authorization', `Bearer ${doctorToken}`)
         .send({ patient_id: '00000000-0000-0000-0000-000000000001', diagnosis_name: 'Asthma' }).expect(201);
       expect(res.body.data).toHaveProperty('id');
     });
 
     it('should reject without name', async () => {
-      await request(app).post('/api/v1/diagnoses').set('Authorization', `Bearer ${clinicianToken}`)
+      await request(app).post('/api/v1/diagnoses').set('Authorization', `Bearer ${doctorToken}`)
         .send({ patient_id: '00000000-0000-0000-0000-000000000001' }).expect(400);
     });
 

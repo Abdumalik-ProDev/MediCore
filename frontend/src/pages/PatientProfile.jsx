@@ -32,6 +32,15 @@ export default function PatientProfile() {
     enabled: !!id,
   });
 
+  const { data: medicalRecords } = useQuery({
+    queryKey: ['patient-medical-records', id],
+    queryFn: async () => {
+      const { data } = await api.get('/medical-records', { params: { patient_id: id, limit: 50 } });
+      return data.data;
+    },
+    enabled: !!id,
+  });
+
   if (isLoading) {
     return <div className="flex justify-center py-16"><Spinner size="lg" /></div>;
   }
@@ -64,38 +73,43 @@ export default function PatientProfile() {
           <div className="card p-6">
             <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <ClipboardList size={18} className="text-primary-500" />
-              Diagnosis History ({patient.diagnoses?.length || 0})
+              Medical Records ({(medicalRecords || patient?.diagnoses)?.length || 0})
             </h2>
-            {!patient.diagnoses || patient.diagnoses.length === 0 ? (
-              <EmptyState message="No diagnoses recorded" />
-            ) : (
-              <div className="space-y-3">
-                {patient.diagnoses.map((dx) => (
-                  <div key={dx.id} className="border border-gray-100 rounded-lg p-4 hover:border-gray-200 transition-colors">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <p className="font-medium text-gray-900">{dx.diagnosis_name}</p>
-                        {dx.diagnosis_code && <p className="text-xs text-gray-500">ICD-10: {dx.diagnosis_code}</p>}
+            {(() => {
+              const records = medicalRecords || patient?.diagnoses || [];
+              if (records.length === 0) return <EmptyState message="No medical records" />;
+              return (
+                <div className="space-y-3">
+                  {records.map((rec) => {
+                    const diseaseName = rec.disease?.name || rec.diagnosis_name;
+                    const icdCode = rec.disease?.icd_code || rec.diagnosis_code;
+                    return (
+                      <div key={rec.id} className="border border-gray-100 rounded-lg p-4 hover:border-gray-200 transition-colors">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <p className="font-medium text-gray-900">{diseaseName}</p>
+                            {icdCode && <p className="text-xs text-gray-500">ICD-10: {icdCode}</p>}
+                          </div>
+                          <div className="flex gap-2">
+                            <Badge variant={rec.severity}>{rec.severity}</Badge>
+                            <Badge variant={rec.status}>{rec.status}</Badge>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          <span>Diagnosed: {formatDate(rec.diagnosed_date)}</span>
+                          {rec.doctor && <span>By: Dr. {fullName(rec.doctor)}</span>}
+                        </div>
+                        {rec.notes && (
+                          <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600">
+                            <span className="font-medium">Notes:</span> {rec.notes}
+                          </div>
+                        )}
                       </div>
-                      <div className="flex gap-2">
-                        <Badge variant={dx.severity}>{dx.severity}</Badge>
-                        <Badge variant={dx.status}>{dx.status}</Badge>
-                      </div>
-                    </div>
-                    {dx.description && <p className="text-sm text-gray-600 mb-2">{dx.description}</p>}
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                      <span>Diagnosed: {formatDate(dx.diagnosed_date)}</span>
-                      {dx.doctor && <span>By: Dr. {fullName(dx.doctor)}</span>}
-                    </div>
-                    {dx.notes && (
-                      <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600">
-                        <span className="font-medium">Notes:</span> {dx.notes}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         </div>
 

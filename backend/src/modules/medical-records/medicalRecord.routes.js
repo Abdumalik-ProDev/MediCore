@@ -1,6 +1,6 @@
 const { Router } = require('express');
-const controller = require('./diagnosis.controller');
-const { createDiagnosisSchema, updateDiagnosisSchema } = require('./diagnosis.validation');
+const controller = require('./medicalRecord.controller');
+const { createMedicalRecordSchema, updateMedicalRecordSchema } = require('./medicalRecord.validation');
 const validate = require('../../common/middleware/validate');
 const authenticate = require('../../common/middleware/auth');
 const authorize = require('../../common/middleware/rbac');
@@ -11,8 +11,8 @@ router.use(authenticate);
 
 router.get('/', controller.list);
 router.get('/:id', controller.getById);
-router.post('/', authorize('admin', 'doctor'), validate(createDiagnosisSchema), controller.create);
-router.put('/:id', authorize('admin', 'doctor'), validate(updateDiagnosisSchema), controller.update);
+router.post('/', authorize('admin', 'doctor'), validate(createMedicalRecordSchema), controller.create);
+router.put('/:id', authorize('admin', 'doctor'), validate(updateMedicalRecordSchema), controller.update);
 router.delete('/:id', authorize('admin'), controller.remove);
 
 module.exports = router;

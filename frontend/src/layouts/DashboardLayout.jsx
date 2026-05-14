@@ -4,14 +4,20 @@ import { useAuth } from '../stores/AuthContext';
 import { NAV_ITEMS } from '../utils/constants';
 import {
   LayoutDashboard, Stethoscope, Users, ClipboardList,
-  LogOut, Menu, X, HeartPulse,
+  LogOut, Menu, X, HeartPulse, Activity, FlaskConical,
+  Send, Calendar, UserCog, Shield,
 } from 'lucide-react';
 
 const icons = {
   Dashboard: LayoutDashboard,
   Doctors: Stethoscope,
   Patients: Users,
-  Diagnoses: ClipboardList,
+  'Medical Records': ClipboardList,
+  'Disease Registry': FlaskConical,
+  'Disease Suggestions': Send,
+  Appointments: Calendar,
+  Receptionists: UserCog,
+  'Audit Logs': Shield,
 };
 
 export default function DashboardLayout() {

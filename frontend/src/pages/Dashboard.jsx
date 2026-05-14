@@ -27,15 +27,15 @@ export default function Dashboard() {
   const counts = useQuery({
     queryKey: ['dashboard-counts'],
     queryFn: async () => {
-      const [docs, pats, diags] = await Promise.all([
+      const [docs, pats, records] = await Promise.all([
         api.get('/doctors?limit=1'),
         api.get('/patients?limit=1'),
-        api.get('/diagnoses?limit=1'),
+        api.get('/medical-records?limit=1'),
       ]);
       return {
         doctors: docs.data.pagination?.total ?? '—',
         patients: pats.data.pagination?.total ?? '—',
-        diagnoses: diags.data.pagination?.total ?? '—',
+        diagnoses: records.data.pagination?.total ?? '—',
       };
     },
   });
